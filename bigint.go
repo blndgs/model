@@ -9,11 +9,19 @@ import (
 
 // ToBigInt converts a protobuf BigInt message to a *big.Int.
 func ToBigInt(b *protov1.BigInt) (*big.Int, error) {
-	result := new(big.Int)
-	result = result.SetBytes(b.GetValue())
+	if b == nil {
+		return nil, errors.New("input is nil")
+	}
+	if b.Value == nil || len(b.Value) == 0 {
+		return nil, errors.New("input byte array cannot be nil or empty")
+	}
+	if b.Negative {
+		return nil, errors.New("negative amounts are not allowed")
+	}
 
-	if len(result.Bits()) == 0 {
-		return nil, errors.New("amount cannot be a zero amount")
+	result := new(big.Int).SetBytes(b.Value)
+	if result.Sign() == 0 { // This check ensures that the byte array does not represent a zero value
+		return nil, errors.New("amount cannot be zero")
 	}
 
 	return result, nil
@@ -25,7 +33,12 @@ func FromBigInt(i *big.Int) (*protov1.BigInt, error) {
 		return nil, errors.New("big.Int value cannot be nil")
 	}
 
+	if i.Sign() <= 0 {
+		return nil, errors.New("amount cannot be a zero or negative amount")
+	}
+
 	return &protov1.BigInt{
 		Value: i.Bytes(),
+		// Negative: i.Sign() < 0,     // Redundant
 	}, nil
 }
